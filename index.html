@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>كاشير مطعم ليالي الفرات</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Changa:wght@600&display=swap" rel="stylesheet">
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Changa', sans-serif;
+    background: #0a2a66;
+    color: white;
+    text-align: center;
+}
+
+.screen {
+    display: none;
+    padding: 20px;
+}
+
+.active {
+    display: block;
+}
+
+h1 {
+    font-size: 40px;
+}
+
+button {
+    font-size: 26px;
+    padding: 15px;
+    margin: 10px;
+    border-radius: 15px;
+    border: none;
+    cursor: pointer;
+    color: black;
+    font-weight: bold;
+}
+
+.rainbow {
+    background: linear-gradient(270deg, red, orange, yellow, green, cyan, blue, violet);
+    background-size: 600% 600%;
+    animation: rainbow 3s ease infinite;
+}
+
+@keyframes rainbow {
+    0% {background-position:0% 50%}
+    50% {background-position:100% 50%}
+    100% {background-position:0% 50%}
+}
+
+.big-btn {
+    width: 90%;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+}
+
+input {
+    width: 90%;
+    padding: 12px;
+    font-size: 22px;
+    margin: 8px;
+    border-radius: 10px;
+    border: none;
+}
+
+table {
+    width: 100%;
+    font-size: 22px;
+    border-collapse: collapse;
+}
+
+td, th {
+    border: 1px solid white;
+    padding: 5px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- الشاشة الرئيسية -->
+<div id="home" class="screen active">
+    <h1>كاشير مطعم ليالي الفرات</h1>
+
+    <button class="rainbow big-btn" onclick="goMenu()">التالي</button>
+    <button class="rainbow big-btn" onclick="openAdmin()">تفاصيل الطلبات</button>
+</div>
+
+<!-- شاشة الأصناف -->
+<div id="menu" class="screen">
+    <h1>اختر الطلب</h1>
+    <div class="grid" id="items"></div>
+    <button class="rainbow big-btn" onclick="goCheckout()">التالي</button>
+</div>
+
+<!-- شاشة التفاصيل والطباعة -->
+<div id="checkout" class="screen">
+    <h1>تفاصيل الطلب</h1>
+
+    <div id="orderDetails"></div>
+
+    <input id="customerName" placeholder="عنوان الزبون">
+    <input id="customerPhone" placeholder="رقم الزبون">
+
+    <h2 id="totalPrice"></h2>
+
+    <button class="rainbow big-btn" onclick="printOrder()">🖨️ طباعة</button>
+    <button class="rainbow big-btn" onclick="goHome()">رجوع</button>
+</div>
+
+<!-- شاشة الإدارة -->
+<div id="admin" class="screen">
+    <h1>سجل الطلبات</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>الصنف</th>
+                <th>العدد</th>
+                <th>السعر</th>
+            </tr>
+        </thead>
+        <tbody id="adminTable"></tbody>
+    </table>
+
+    <h2 id="grandTotal"></h2>
+
+    <button class="rainbow big-btn" onclick="clearHistory()">🗑️ مسح جميع الطلبات</button>
+    <button class="rainbow big-btn" onclick="goHome()">رجوع</button>
+</div>
+
+<script>
+// ✅ الأسعار الجديدة
+const prices = {
+    "سمك مسكوف": 15000,
+    "صينيه مندي لحم": 16000,
+    "نفر مندي لحم": 8000,
+    "دجاجه مندي": 20000,
+    "صينيه مندي دجاج": 10000,
+    "نفر مندي دجاج": 5000,
+    "كيلو كباب": 18000,
+    "نص كيلو كباب": 9000,
+    "نفر كباب": 5000,
+    "نص نفر كباب": 3500,
+    "معلاك نفر": 5000,
+    "معلاك نص نفر": 3500
+};
+
+let order = {};
+let history = [];
+
+const itemsDiv = document.getElementById("items");
+
+// إنشاء أزرار الأصناف
+Object.keys(prices).forEach(item => {
+    const btn = document.createElement("button");
+    btn.className = "rainbow";
+    btn.innerText = item;
+    btn.onclick = () => addItem(item);
+    itemsDiv.appendChild(btn);
+});
+
+function show(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+}
+
+function goMenu() { show("menu"); }
+function goCheckout() { renderOrder(); show("checkout"); }
+function goHome() { show("home"); }
+
+// زيادة عدد الصنف عند الضغط
+function addItem(item) {
+    if (!order[item]) order[item] = 0;
+    order[item]++;
+    alert(item + " = " + order[item]);
+}
+
+// عرض تفاصيل الطلب
+function renderOrder() {
+    let html = "";
+    let total = 0;
+
+    for (let item in order) {
+        let qty = order[item];
+        let price = prices[item] * qty;
+        total += price;
+        html += `<p>${item} × ${qty} = ${price} د.ع</p>`;
+    }
+
+    document.getElementById("orderDetails").innerHTML = html || "لا يوجد طلب";
+    document.getElementById("totalPrice").innerText = "المجموع: " + total + " د.ع";
+}
+
+// طباعة وحفظ الطلب
+function printOrder() {
+    if (Object.keys(order).length === 0) {
+        alert("لا يوجد طلب للطباعة");
+        return;
+    }
+
+    history.push({...order});
+    window.print();
+    order = {};
+}
+
+// فتح شاشة الإدارة مع رمز الحماية
+function openAdmin() {
+    let pass = prompt("ادخل الرمز:");
+    if (pass !== "098123") {
+        alert("رمز خطأ");
+        return;
+    }
+    renderAdmin();
+    show("admin");
+}
+
+// عرض جدول الطلبات
+function renderAdmin() {
+    let table = "";
+    let totalAll = 0;
+
+    history.forEach(order => {
+        for (let item in order) {
+            let qty = order[item];
+            let price = prices[item] * qty;
+            totalAll += price;
+            table += `<tr><td>${item}</td><td>${qty}</td><td>${price}</td></tr>`;
+        }
+    });
+
+    document.getElementById("adminTable").innerHTML = table || "<tr><td colspan='3'>لا توجد طلبات</td></tr>";
+    document.getElementById("grandTotal").innerText = "المجموع الكلي: " + totalAll + " د.ع";
+}
+
+// 🗑️ مسح جميع الطلبات
+function clearHistory() {
+    if (!confirm("هل أنت متأكد من مسح جميع الطلبات؟")) return;
+    history = [];
+    renderAdmin();
+    alert("تم مسح جميع الطلبات ✅");
+}
+</script>
+
+</body>
+</html>
